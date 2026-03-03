@@ -2,8 +2,8 @@ name: Supabase Backup
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   backup:
@@ -14,18 +14,38 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+
       - name: Create backups directory
         run: mkdir -p backups
+
       - name: Backup schema
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: pg_dump -h ${{ secrets.DB_HOST }} -p ${{ secrets.DB_PORT }} -U postgres -d postgres --schema-only -f backups/schema.sql
+        run: |
+          pg_dump \
+            -h ${{ secrets.DB_HOST }} \
+            -p ${{ secrets.DB_PORT }} \
+            -U ${{ secrets.DB_USER }} \
+            -d postgres \
+            --schema-only \
+            -f backups/schema.sql
+
       - name: Backup data
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: pg_dump -h ${{ secrets.DB_HOST }} -p ${{ secrets.DB_PORT }} -U postgres -d postgres --data-only --column-inserts -f backups/data.sql
+        run: |
+          pg_dump \
+            -h ${{ secrets.DB_HOST }} \
+            -p ${{ secrets.DB_PORT }} \
+            -U ${{ secrets.DB_USER }} \
+            -d postgres \
+            --data-only \
+            --column-inserts \
+            -f backups/data.sql
+
       - name: List backup files
         run: ls -la backups/
+
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'Daily Supabase backup'

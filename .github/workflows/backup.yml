@@ -1,8 +1,10 @@
 name: Supabase Backup
+
 on:
   schedule:
-    - cron: '0 0 * * *'  # Daily at midnight
+    - cron: '0 0 * * *'  # Daily at midnight UTC
   workflow_dispatch:  # Manual trigger
+
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -13,7 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main  # Or your default branch
+          ref: main  # Change to your default branch if not 'main'
+      - name: Create backups directory
+        run: mkdir -p backups
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -23,7 +27,9 @@ jobs:
         run: supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/schema.sql
       - name: Backup data
         run: supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/data.sql --data-only --use-copy
+      - name: List backup files (debug)
+        run: ls -la backups/
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Daily Supabase backup {{ github.event.head_commit.id }}'
+          commit_message: 'Daily Supabase backup {{ github.run_id }}'
           file_pattern: backups/*.sql
